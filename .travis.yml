@@ -1,0 +1,11 @@
+language: node_js
+cache:
+  directories:
+  - node_modules
+install:
+  - yarn install
+deploy:
+  - provider: script
+    script: yarn deploy
+    on:
+      branch: setup-serverless
