@@ -4,6 +4,7 @@ cache:
   - node_modules
 install:
   - yarn install
+  - npm install -g serverless
 deploy:
   - provider: script
     script: yarn deploy
