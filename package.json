@@ -5,12 +5,14 @@
   "main": "handler.js",
   "scripts": {
     "test": "echo \"Error: no test specified\"",
+    "start": "serverless offline --port 5000",
     "deploy": "serverless deploy -v",
     "invoke": "serverless invoke -f"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "serverless": "^1.39.1"
+    "serverless": "^1.39.1",
+    "serverless-offline": "^4.9.2"
   }
 }
