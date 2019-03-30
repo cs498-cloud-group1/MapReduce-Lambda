@@ -11,11 +11,9 @@
   },
   "author": "",
   "license": "ISC",
-  "devDependencies": {
-    "serverless": "^1.39.1",
-    "serverless-offline": "^4.9.2"
-  },
   "dependencies": {
+    "serverless": "^1.39.1",
+    "serverless-offline": "^4.9.2",
     "uuid": "^3.3.2"
   }
 }
