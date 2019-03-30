@@ -20,7 +20,23 @@ service: back-end # NOTE: update this with your service name
 provider:
   name: aws
   runtime: nodejs8.10
-
+  # iamRoleStatements:
+  #   - Effect: Allow
+  #     Action:
+  #       - 'dynamodb:ListTables'
+  #       - 'dynamodb:DescribeTable'
+  #       - 'dynamodb:DescribeStream'
+  #       - 'dynamodb:ListStreams'
+  #       - 'dynamodb:GetShardIterator'
+  #       - 'dynamodb:BatchGetItem'
+  #       - 'dynamodb:GetItem'
+  #       - 'dynamodb:Query'
+  #       - 'dynamodb:Scan'
+  #       - 'dynamodb:DescribeReservedCapacity'
+  #       - 'dynamodb:DescribeReservedCapacityOfferings'
+  #       - 'dynamodb:GetRecords'
+  #     Resource:
+  #       - { "Fn::GetAtt": ["JobsTable", "Arn"] }
 # you can overwrite defaults here
 #  stage: dev
 #  region: us-east-1
@@ -55,6 +71,14 @@ provider:
 #    - exclude-me-dir/**
 
 functions:
+  master:
+    handler: mapreduce/master.master
+    events:
+      - stream:
+          type: dynamodb
+          batchsize: 1
+          enabled: true
+          arn: { "Fn::GetAtt": ["JobsTable", "StreamArn"] }
   create:
     handler: jobs/create.create
     events:
@@ -143,6 +167,8 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
     DynamoDBIamPolicy:
       Type: AWS::IAM::Policy
       DependsOn: JobsTable
@@ -159,6 +185,8 @@ resources:
                 - dynamodb:Scan
                 - dynamodb:UpdateItem
                 - dynamodb:DeleteItem
+                - dynamodb:DescribeStream
+                - dynamodb:ListStreams
               Resource: arn:aws:dynamodb:*:*:table/jobs
         Roles:
           - Ref: IamRoleLambdaExecution

@@ -1,31 +1,40 @@
-'use strict';
+"use strict";
 
-const AWS = require('aws-sdk'); // eslint-disable-line import/no-extraneous-dependencies
+const AWS = require("aws-sdk"); // eslint-disable-line import/no-extraneous-dependencies
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const params = {
-  TableName: 'jobs',
+  TableName: "jobs"
 };
 
-module.exports.list = (event, context, callback) => {
-  // fetch all todos from the database
-  dynamoDb.scan(params, (error, result) => {
-    // handle potential errors
+module.exports.list = async (event, context, callback) => {
+  try {
+    let result = await dynamoDb.scan(params).promise();
+    const error = result.$response.error;
+    
     if (error) {
       console.error(error);
-      callback(null, {
-        statusCode: error.statusCode || 501,
-        headers: { 'Content-Type': 'text/plain' },
-        body: 'Couldn\'t fetch the todos.',
-      });
+      const response = {
+        statusCode: error.statusCode,
+        headers: { "Content-Type": "text/plain" },
+        body: "Couldn't fetch the jobs."
+      };
+      callback(null, response);
       return;
     }
-
-    // create a response
+    
     const response = {
       statusCode: 200,
-      body: JSON.stringify(result.Items),
+      body: JSON.stringify(result.Items)
     };
     callback(null, response);
-  });
+  } catch (e) {
+    console.error(error);
+    const response = {
+      statusCode: 500,
+      headers: { "Content-Type": "text/plain" },
+      body: "Couldn't fetch the jobs."
+    };
+    callback(null, response);
+  }
 };
