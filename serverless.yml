@@ -55,6 +55,14 @@ provider:
 #    - exclude-me-dir/**
 
 functions:
+  master:
+    handler: mapreduce/master.master
+    events:
+      - stream:
+          type: dynamodb
+          batchsize: 1
+          enabled: true
+          arn: { "Fn::GetAtt": ["JobsTable", "StreamArn"] }
   create:
     handler: jobs/create.create
     events:
@@ -69,13 +77,7 @@ functions:
           path: jobs
           method: get
           cors: true
-  hello:
-    handler: handler.hello
-    memorySize: 128
-    events:
-      - http:
-          path: /hello
-          method: get
+
 plugins:
   - serverless-offline
 
@@ -143,6 +145,8 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
     DynamoDBIamPolicy:
       Type: AWS::IAM::Policy
       DependsOn: JobsTable
@@ -159,6 +163,8 @@ resources:
                 - dynamodb:Scan
                 - dynamodb:UpdateItem
                 - dynamodb:DeleteItem
+                - dynamodb:DescribeStream
+                - dynamodb:ListStreams
               Resource: arn:aws:dynamodb:*:*:table/jobs
         Roles:
           - Ref: IamRoleLambdaExecution
