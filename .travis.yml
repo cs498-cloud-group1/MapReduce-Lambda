@@ -4,7 +4,8 @@ cache:
   - node_modules
 install:
   - yarn install
-  - npm install -g serverless serverless-offline
+  - npm install -g serverless
+  - npm install -g serverless-offline
 deploy:
   - provider: script
     script: yarn deploy
