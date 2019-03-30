@@ -6,7 +6,7 @@ Setup aws creds locally
 run `serverless deploy`
 
 ## to create a job
-`curl -X POST https://113aq7atqd.execute-api.us-east-1.amazonaws.com/dev/jobs --data '{ "jobName": "Test Job" }'`
+`curl -X POST https://XXXXXXX.execute-api.us-east-1.amazonaws.com/dev/jobs --data '{ "jobName": "Test Job" }'`
 
 ## list jobs
-`curl -X POST https://113aq7atqd.execute-api.us-east-1.amazonaws.com/dev/jobs --data '{ "jobName": "Test Job" }'`
+`curl -X GET https://XXXXXXX.execute-api.us-east-1.amazonaws.com/dev/jobs`
