@@ -77,13 +77,7 @@ functions:
           path: jobs
           method: get
           cors: true
-  hello:
-    handler: handler.hello
-    memorySize: 128
-    events:
-      - http:
-          path: /hello
-          method: get
+
 plugins:
   - serverless-offline
 

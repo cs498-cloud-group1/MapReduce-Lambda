@@ -13,6 +13,10 @@ module.exports.create = async (event, context, callback) => {
     Item: {
       jobId: uuid.v1(),
       jobName: data.jobName,
+      url: data.url,
+      map: data.map,
+      reduce: data.reduce,
+      status: "created",
       createdAt: timestamp,
       updatedAt: timestamp
     }
@@ -36,7 +40,7 @@ module.exports.create = async (event, context, callback) => {
 
     const response = {
       statusCode: 200,
-      body: JSON.stringify(dynamoData)
+      body: JSON.stringify(dynamoData.Item)
     };
     callback(null, response);
   } catch (e) {
