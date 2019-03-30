@@ -55,6 +55,20 @@ provider:
 #    - exclude-me-dir/**
 
 functions:
+  create:
+    handler: jobs/create.create
+    events:
+      - http:
+          path: jobs
+          method: post
+          cors: true
+  list:
+    handler: jobs/list.list
+    events:
+      - http:
+          path: jobs
+          method: get
+          cors: true
   hello:
     handler: handler.hello
     memorySize: 128
@@ -110,3 +124,41 @@ plugins:
 #     NewOutput:
 #       Description: "Description for the output"
 #       Value: "Some output value"
+resources:
+  Resources:
+    JobsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: jobs
+        AttributeDefinitions:
+          - AttributeName: jobId
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: N
+        KeySchema:
+          - AttributeName: jobId
+            KeyType: HASH
+          - AttributeName: createdAt
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+    DynamoDBIamPolicy:
+      Type: AWS::IAM::Policy
+      DependsOn: JobsTable
+      Properties:
+        PolicyName: lambda-jobs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+                - dynamodb:Scan
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+              Resource: arn:aws:dynamodb:*:*:table/jobs
+        Roles:
+          - Ref: IamRoleLambdaExecution
