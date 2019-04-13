@@ -63,6 +63,23 @@ functions:
           batchsize: 1
           enabled: true
           arn: { "Fn::GetAtt": ["JobsTable", "StreamArn"] }
+
+  mapper:
+    handler: mapreduce/mapper.mapper
+    events:
+      - http:
+          path: mapper
+          method: post
+          cors: true
+  
+  reducer:
+    handler: mapreduce/reducer.reducer
+    events:
+      - http:
+          path: reducer
+          method: post
+          cors: true
+
   create:
     handler: jobs/create.create
     events:
