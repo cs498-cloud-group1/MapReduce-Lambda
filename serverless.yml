@@ -78,6 +78,18 @@ functions:
           method: get
           cors: true
 
+  getjob:
+    handler: jobs/getjob.getjob
+    events:
+      - http:
+          path: jobs/{jobId}
+          method: get
+          cors: true
+          request:
+            parameters:
+              paths:
+                jobId: true
+
 plugins:
   - serverless-offline
 
