@@ -20,7 +20,7 @@ service: back-end # NOTE: update this with your service name
 provider:
   name: aws
   runtime: nodejs8.10
-
+  timeout: 900
 # you can overwrite defaults here
 #  stage: dev
 #  region: us-east-1
@@ -145,6 +145,39 @@ plugins:
 #       Value: "Some output value"
 resources:
   Resources:
+    shuffleResultsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: shuffleResults
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: N
+          - AttributeName: jobId
+            AttributeType: S
+          - AttributeName: key
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+          - AttributeName: createdAt
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 2
+          WriteCapacityUnits: 2
+        GlobalSecondaryIndexes:
+          - IndexName: SortKey
+            KeySchema:
+              - AttributeName: jobId
+                KeyType: HASH
+              - AttributeName: key
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 2
+              WriteCapacityUnits: 2
     JobsTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -182,6 +215,9 @@ resources:
                 - dynamodb:DeleteItem
                 - dynamodb:DescribeStream
                 - dynamodb:ListStreams
-              Resource: arn:aws:dynamodb:*:*:table/jobs
+              Resource: 
+                - arn:aws:dynamodb:*:*:table/jobs
+                - arn:aws:dynamodb:*:*:table/shuffleResults
+                - arn:aws:dynamodb:*:*:table/shuffleResults/index/*
         Roles:
           - Ref: IamRoleLambdaExecution

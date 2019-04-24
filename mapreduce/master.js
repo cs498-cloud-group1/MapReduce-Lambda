@@ -1,13 +1,51 @@
 "use strict";
 require("es6-promise").polyfill();
 require("isomorphic-fetch");
+const AWS = require("aws-sdk");
+
+const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
 const supportedDatasetTypes = [".txt"];
 
 const mapperUrl =
-  "https://113aq7atqd.execute-api.us-east-1.amazonaws.com/dev/mapper";
+  "https://orrk7q3ot4.execute-api.us-east-1.amazonaws.com/dev/mapper";
 const reducerUrl =
-  "https://113aq7atqd.execute-api.us-east-1.amazonaws.com/dev/reducer";
+  "https://orrk7q3ot4.execute-api.us-east-1.amazonaws.com/dev/reducer";
+
+async function performReduce(keyValueData) {
+  const reducerData = {
+    data: keyValueData,
+    reduceFunction: `
+            function reduce(data, emit) {
+                let sum = 0;
+                data.forEach(datum => {
+                  sum += datum.value
+                });
+                emit({key: data[0].key, value: sum});
+            }
+        `
+  };
+  let response2 = await fetch(reducerUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(reducerData)
+  });
+  return reducerData;
+}
+
+async function readMapReduceResults(jobId) {
+  const params = {
+    TableName: "shuffleResults",
+    IndexName: "SortKey",
+    KeyConditionExpression: "jobId = :job_id",
+    ExpressionAttributeValues: { ":job_id": jobId }
+  };
+
+  let result = await dynamoDb.query(params).promise();
+  return result;
+}
 
 async function performMapReduce(record) {
   const datasetUrl = record.dynamodb.NewImage.url;
@@ -16,42 +54,43 @@ async function performMapReduce(record) {
     return;
   }
   //split data set
+  console.log(record.dynamodb.NewImage.jobId);
   const mapperData = {
-    data: "This is some test words",
+    jobId: record.dynamodb.NewImage.jobId.S,
+    data:
+      "This is some test words This is some test words this is some test test test words",
     mapFunction: `
         function map(data, emit) {
             let words = data.split(' ');
-            words.forEach((word) => emit({key: word, value: 1 }));
+            words.forEach((word) => emit({key: word.toLowerCase(), value: 1 }));
         }
     `
   };
   //mapper
-  let response = await fetch(mapperUrl, {
+  await fetch(mapperUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify(mapperData)
   });
-  console.log(response);
-  //perform shuffle
-  const reducerData = {
-    data: "test",
-    reduceFunction: `
-        function reduce(data) {
-            console.log(data);
-        }
-    `
-  };
-  //call reducers
-  let response2 = await fetch(reducerUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(reducerData)
+  //perform shuffleResults
+  let currentKey = null;
+  let reducerKeyValues = [];
+  let reducerActions = [];
+  let result = await readMapReduceResults(record.dynamodb.NewImage.jobId.S);
+  result.Items.forEach(item => {
+    if (currentKey === null) currentKey = item.key;
+
+    if (item.key !== currentKey) {
+      reducerActions.push(performReduce(reducerKeyValues));
+      reducerKeyValues = [];
+      currentKey = item.key;
+    }
+    reducerKeyValues.push({ ...item });
   });
-  console.log(response2);
+  reducerActions.push(performReduce(reducerKeyValues));
+  await Promise.all(reducerActions);
 }
 
 module.exports.master = async (event, context, callback) => {
