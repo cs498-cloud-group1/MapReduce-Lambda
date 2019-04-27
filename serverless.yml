@@ -21,6 +21,12 @@ provider:
   name: aws
   runtime: nodejs8.10
   timeout: 900
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - lambda:InvokeFunction
+      Resource: "*"
+
 # you can overwrite defaults here
 #  stage: dev
 #  region: us-east-1
@@ -145,6 +151,63 @@ plugins:
 #       Value: "Some output value"
 resources:
   Resources:
+    DataBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: mapreduce-data-bucket
+    DataBucketPolicy: 
+      Type: AWS::S3::BucketPolicy
+      Properties: 
+        Bucket:
+          Ref: "DataBucket"
+        PolicyDocument:
+          Statement:
+            -
+              Effect: "Allow"
+              Principal: "*"
+              Action:
+                - "s3:GetObject"
+              Resource:
+                Fn::Join:
+                  - ""
+                  - 
+                    - "arn:aws:s3:::"
+                    - 
+                      Ref: "DataBucket"
+                    - "/*"
+    jobResultTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: jobResult
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: N
+          - AttributeName: jobId
+            AttributeType: S
+          - AttributeName: value
+            AttributeType: N
+        ProvisionedThroughput:
+          ReadCapacityUnits: 100
+          WriteCapacityUnits: 100
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+          - AttributeName: createdAt
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: jobsResultsSortKey
+            KeySchema:
+              - AttributeName: jobId
+                KeyType: HASH
+              - AttributeName: value
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 100
+              WriteCapacityUnits: 100
     shuffleResultsTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -164,8 +227,8 @@ resources:
           - AttributeName: createdAt
             KeyType: RANGE
         ProvisionedThroughput:
-          ReadCapacityUnits: 2
-          WriteCapacityUnits: 2
+          ReadCapacityUnits: 100
+          WriteCapacityUnits: 100
         GlobalSecondaryIndexes:
           - IndexName: SortKey
             KeySchema:
@@ -176,8 +239,8 @@ resources:
             Projection:
               ProjectionType: ALL
             ProvisionedThroughput:
-              ReadCapacityUnits: 2
-              WriteCapacityUnits: 2
+              ReadCapacityUnits: 100
+              WriteCapacityUnits: 100
     JobsTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -219,5 +282,7 @@ resources:
                 - arn:aws:dynamodb:*:*:table/jobs
                 - arn:aws:dynamodb:*:*:table/shuffleResults
                 - arn:aws:dynamodb:*:*:table/shuffleResults/index/*
+                - arn:aws:dynamodb:*:*:table/jobResult
+                - arn:aws:dynamodb:*:*:table/jobResult/index/*
         Roles:
           - Ref: IamRoleLambdaExecution

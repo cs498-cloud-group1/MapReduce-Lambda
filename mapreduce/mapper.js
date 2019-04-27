@@ -18,20 +18,20 @@ module.exports.mapper = async (event, context, callback) => {
     let outputMap = () => new Promise(async (resolve, reject) => {
         let promises = [];
         mapData.forEach(async mapItem => {
-
-            const dynamoData = {
-                TableName: "shuffleResults",
-                Item: {
-                    jobId: data.jobId,
-                    key: mapItem.key,
-                    value: mapItem.value,
-                    id: uuid.v1(),
-                    createdAt: timestamp,
-                    updatedAt: timestamp
-                }
-            };
-
-            promises.push(dynamoDb.put(dynamoData).promise());
+            if (mapItem.key && mapItem.value) {
+                const dynamoData = {
+                    TableName: "shuffleResults",
+                    Item: {
+                        jobId: data.jobId,
+                        key: mapItem.key,
+                        value: mapItem.value,
+                        id: uuid.v1(),
+                        createdAt: timestamp,
+                        updatedAt: timestamp
+                    }
+                };
+                promises.push(dynamoDb.put(dynamoData).promise());
+            }
         });
         await Promise.all(promises);
         resolve();
