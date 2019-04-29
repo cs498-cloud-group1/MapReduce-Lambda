@@ -72,11 +72,8 @@ functions:
 
   mapper:
     handler: mapreduce/mapper.mapper
-    events:
-      - http:
-          path: mapper
-          method: post
-          cors: true
+    timeout: 900
+    memorySize: 3000
   
   reducer:
     handler: mapreduce/reducer.reducer
@@ -113,7 +110,7 @@ plugins:
 #          method: get
 #      - websocket: $connect
 #      - s3: ${env:BUCKET}
-#      - schedule: rate(10 minutes)
+#      - schedule: rate(50 minutes)
 #      - sns: greeter-topic
 #      - stream: arn:aws:dynamodb:region:XXXXXX:table/foo/stream/1970-01-01T00:00:00.000
 #      - alexaSkill: amzn1.ask.skill.xx-xx-xx-xx
@@ -189,8 +186,8 @@ resources:
           - AttributeName: value
             AttributeType: N
         ProvisionedThroughput:
-          ReadCapacityUnits: 100
-          WriteCapacityUnits: 100
+          ReadCapacityUnits: 500
+          WriteCapacityUnits: 500
         KeySchema:
           - AttributeName: id
             KeyType: HASH
@@ -206,8 +203,8 @@ resources:
             Projection:
               ProjectionType: ALL
             ProvisionedThroughput:
-              ReadCapacityUnits: 100
-              WriteCapacityUnits: 100
+              ReadCapacityUnits: 500
+              WriteCapacityUnits: 500
     shuffleResultsTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -227,8 +224,8 @@ resources:
           - AttributeName: createdAt
             KeyType: RANGE
         ProvisionedThroughput:
-          ReadCapacityUnits: 100
-          WriteCapacityUnits: 100
+          ReadCapacityUnits: 500
+          WriteCapacityUnits: 500
         GlobalSecondaryIndexes:
           - IndexName: SortKey
             KeySchema:
@@ -239,8 +236,8 @@ resources:
             Projection:
               ProjectionType: ALL
             ProvisionedThroughput:
-              ReadCapacityUnits: 100
-              WriteCapacityUnits: 100
+              ReadCapacityUnits: 500
+              WriteCapacityUnits: 500
     JobsTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -276,6 +273,7 @@ resources:
                 - dynamodb:Scan
                 - dynamodb:UpdateItem
                 - dynamodb:DeleteItem
+                - dynamodb:BatchWriteItem
                 - dynamodb:DescribeStream
                 - dynamodb:ListStreams
               Resource: 

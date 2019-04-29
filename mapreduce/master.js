@@ -4,13 +4,14 @@ require("isomorphic-fetch");
 const AWS = require("aws-sdk");
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
-
+const lambda = new AWS.Lambda({  
+  region: "us-east-1"
+});
 const supportedDatasetTypes = [".txt"];
 
-const mapperUrl =
-  "https://s4pxkot9kg.execute-api.us-east-1.amazonaws.com/dev/mapper";
+
 const reducerUrl =
-  "https://s4pxkot9kg.execute-api.us-east-1.amazonaws.com/dev/reducer";
+  "https://xb6u8lsa7h.execute-api.us-east-1.amazonaws.com/dev/reducer";
 
 async function performReduce(keyValueData, jobId) {
   const reducerData = {
@@ -36,14 +37,16 @@ async function performReduce(keyValueData, jobId) {
   return reducerData;
 }
 
-async function readMapReduceResults(jobId) {
+async function readMapReduceResults(jobId, startKey = null) {
   const params = {
     TableName: "shuffleResults",
     IndexName: "SortKey",
     KeyConditionExpression: "jobId = :job_id",
     ExpressionAttributeValues: { ":job_id": jobId }
   };
-
+  if (startKey) {
+    params["ExclusiveStartKey"] = startKey;
+  }
   let result = await dynamoDb.query(params).promise();
   return result;
 }
@@ -63,16 +66,21 @@ async function performMapReduce(record) {
     record.dynamodb.NewImage.bucket.S,
     record.dynamodb.NewImage.fileName.S
   ))).split("\n");
-  let numberOfChunks = Math.ceil(mapData.length / 1000);
+  let numberOfChunks = Math.ceil(mapData.length / 5000);
   let mappers = [];
   console.log(numberOfChunks);
   for (let i = 0; i < numberOfChunks; i++) {
+    console.log(mapData.length);
+    console.log(i)
+    console.log(i * 5000)
+    console.log(mapData.slice(i * 5000,  5000).length);
     const mapperData = {
       jobId: record.dynamodb.NewImage.jobId.S,
-      data: mapData.slice(i * 2000, (i+1) * 2000).join(' '),
+      data: mapData.slice(i * 5000,  (i +1) * 5000).join(' '),
       mapFunction: `
           function map(data, emit) {
               let words = data.trim().replace(/[^a-zA-Z0-9]/g, ' ').split(' ');
+              console.log(words);
               words.forEach((word) => {
                 if (word !== '') {
                   emit({key: word.toLowerCase(), value: 1 });
@@ -81,34 +89,42 @@ async function performMapReduce(record) {
           }
       `
     };
-    //mapper
-    let mapper = fetch(mapperUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(mapperData)
-    });
-    console.log('mapper called');
-    mappers.push(mapper);
+    const params  = {
+      FunctionName: "back-end-dev-mapper",
+      InvocationType: "RequestResponse",
+      Payload: JSON.stringify(mapperData)
+    }
+    mappers.push(lambda.invoke(params).promise())
+
   }
+  console.log(`Mappers called: ${mappers.length}`);
   await Promise.all(mappers);
   //perform shuffleResults
+  let keepGoing = true;
   let currentKey = null;
   let reducerKeyValues = [];
   let reducerActions = [];
-  let result = await readMapReduceResults(record.dynamodb.NewImage.jobId.S);
-  console.log(result);
-  result.Items.forEach(item => {
-    if (currentKey === null) currentKey = item.key;
+  let jobId = record.dynamodb.NewImage.jobId.S;
+  let result = await readMapReduceResults(jobId);
+  while (keepGoing) {
+    console.log(result.Count);
+    for (let item of result.Items) {
+      if (currentKey === null) currentKey = item.key;
 
-    if (item.key !== currentKey) {
-      reducerActions.push(performReduce(reducerKeyValues));
-      reducerKeyValues = [];
-      currentKey = item.key;
+      if (item.key !== currentKey) {
+        reducerActions.push(performReduce(reducerKeyValues));
+        reducerKeyValues = [];
+        currentKey = item.key;
+      }
+      reducerKeyValues.push({ ...item });
     }
-    reducerKeyValues.push({ ...item });
-  });
+    if (result.LastEvaluatedKey) {
+      result = await readMapReduceResults(jobId, result.LastEvaluatedKey)
+    } else {
+      keepGoing = false;
+    }
+  }
+
   reducerActions.push(
     performReduce(reducerKeyValues, record.dynamodb.NewImage.jobId.S)
   );
