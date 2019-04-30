@@ -8,14 +8,15 @@ module.exports.getresults = async (event, context, callback) => {
   const params = {
     TableName: "jobResult",
     IndexName: "jobsResultsSortKey",
-    FilterExpression: "jobId = :jobId",
+    KeyConditionExpression: "jobId = :job_id",
+    ScanIndexForward: false,
     ExpressionAttributeValues: {
-      ":jobId": event.pathParameters.jobId
+      ":job_id": event.pathParameters.jobId
     }
   };
 
   try {
-    let result = await dynamoDb.scan(params).promise();
+    let result = await dynamoDb.query(params).promise();
     const error = result.$response.error;
 
     if (error) {
@@ -34,7 +35,6 @@ module.exports.getresults = async (event, context, callback) => {
     }
 
     if (result.Items.length == 0) {
-      console.error(error);
       const response = {
         statusCode: 404,
         headers: {
@@ -59,7 +59,7 @@ module.exports.getresults = async (event, context, callback) => {
     callback(null, response);
 
   } catch (e) {
-    console.error(error);
+    console.error(e);
     const response = {
       statusCode: 500,
       headers: {

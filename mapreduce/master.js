@@ -4,30 +4,21 @@ require("isomorphic-fetch");
 const AWS = require("aws-sdk");
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
-const lambda = new AWS.Lambda({  
+const lambda = new AWS.Lambda({
   region: "us-east-1"
 });
 const supportedDatasetTypes = [".txt"];
 
-
 const reducerUrl =
   "https://xb6u8lsa7h.execute-api.us-east-1.amazonaws.com/dev/reducer";
 
-async function performReduce(keyValueData, jobId) {
+async function performReduce(keyValueData, jobId, reduceFunction) {
   const reducerData = {
     jobId: jobId,
     data: keyValueData,
-    reduceFunction: `
-            function reduce(data, emit) {
-                let sum = 0;
-                data.forEach(datum => {
-                  sum += datum.value
-                });
-                emit({key: data[0].key, value: Number(sum)});
-            }
-        `
+    reduceFunction: reduceFunction
   };
-  let response2 = await fetch(reducerUrl, {
+   await fetch(reducerUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -62,40 +53,24 @@ async function readS3Data(bucket, fileName) {
 async function performMapReduce(record) {
   //split data set
   console.log(record.dynamodb.NewImage.jobId);
-  let mapData = await (await (readS3Data(
+  let mapData = await (await readS3Data(
     record.dynamodb.NewImage.bucket.S,
     record.dynamodb.NewImage.fileName.S
-  ))).split("\n");
+  )).split("\n");
   let numberOfChunks = Math.ceil(mapData.length / 5000);
   let mappers = [];
-  console.log(numberOfChunks);
   for (let i = 0; i < numberOfChunks; i++) {
-    console.log(mapData.length);
-    console.log(i)
-    console.log(i * 5000)
-    console.log(mapData.slice(i * 5000,  5000).length);
     const mapperData = {
       jobId: record.dynamodb.NewImage.jobId.S,
-      data: mapData.slice(i * 5000,  (i +1) * 5000).join(' '),
-      mapFunction: `
-          function map(data, emit) {
-              let words = data.replace(/[^a-zA-Z0-9]/g, ' ').trim().split(' ');
-              console.log(words);
-              words.forEach((word) => {
-                if (word !== '') {
-                  emit({key: word.toLowerCase(), value: 1 });
-                }
-              });
-          }
-      `
+      data: mapData.slice(i * 5000, (i + 1) * 5000).join(" "),
+      mapFunction: record.dynamodb.NewImage.map.S
     };
-    const params  = {
+    const params = {
       FunctionName: "back-end-dev-mapper",
       InvocationType: "RequestResponse",
       Payload: JSON.stringify(mapperData)
-    }
-    mappers.push(lambda.invoke(params).promise())
-
+    };
+    mappers.push(lambda.invoke(params).promise());
   }
   console.log(`Mappers called: ${mappers.length}`);
   await Promise.all(mappers);
@@ -106,41 +81,46 @@ async function performMapReduce(record) {
   let reducerActions = [];
   let jobId = record.dynamodb.NewImage.jobId.S;
   let result = await readMapReduceResults(jobId);
+  let lastKeySeen = null;
   while (keepGoing) {
     console.log(result.Count);
     for (let item of result.Items) {
       if (currentKey === null) currentKey = item.key;
 
       if (item.key !== currentKey) {
-        reducerActions.push(performReduce(reducerKeyValues, jobId));
+        reducerActions.push(performReduce(reducerKeyValues, jobId, record.dynamodb.NewImage.reduce.S));
         reducerKeyValues = [];
         currentKey = item.key;
       }
+      lastKeySeen = item.key;
       reducerKeyValues.push({ ...item });
     }
     if (result.LastEvaluatedKey) {
-      result = await readMapReduceResults(jobId, result.LastEvaluatedKey)
+      result = await readMapReduceResults(jobId, result.LastEvaluatedKey);
     } else {
       keepGoing = false;
     }
   }
-
-  reducerActions.push(
-    performReduce(reducerKeyValues, record.dynamodb.NewImage.jobId.S)
-  );
+  if (currentKey !== lastKeySeen) {
+    console.log("This should not print")
+    console.log(currentKey);
+    console.log(lastKeySeen);
+    reducerActions.push(
+      performReduce(reducerKeyValues, record.dynamodb.NewImage.jobId.S)
+    );
+  }
   await Promise.all(reducerActions);
 }
 
 module.exports.master = async (event, context, callback) => {
   let jobs = [];
-  event.Records.forEach(record => {
+  for (let record of event.Records) {
     let mapReduceJob = new Promise(async (resolve, reject) => {
       await performMapReduce(record);
       resolve();
     });
     jobs.push(mapReduceJob);
-  });
-
-  await Promise.all(jobs);
+    await Promise.all(jobs);
+  }
   return;
 };
