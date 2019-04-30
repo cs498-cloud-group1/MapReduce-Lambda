@@ -10,3 +10,5 @@ run `serverless deploy`
 
 ## list jobs
 `curl -X GET https://XXXXXXX.execute-api.us-east-1.amazonaws.com/dev/jobs`
+
+`curl -X GET https://xb6u8lsa7h.execute-api.us-east-1.amazonaws.com/dev/results/caa46bc0-6a28-11e9-b097-fb5d73387318`

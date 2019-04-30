@@ -98,6 +98,18 @@ functions:
           method: get
           cors: true
 
+  results:
+    handler: jobs/getresults.getresults
+    events:
+      - http:
+          path: results/{jobId}
+          method: get
+          cors: true
+        request:
+            parameters:
+              paths:
+                jobId: true
+
   getjob:
     handler: jobs/getjob.getjob
     events:

@@ -23,7 +23,7 @@ async function performReduce(keyValueData, jobId) {
                 data.forEach(datum => {
                   sum += datum.value
                 });
-                emit({key: data[0].key, value: sum});
+                emit({key: data[0].key, value: Number(sum)});
             }
         `
   };
@@ -79,7 +79,7 @@ async function performMapReduce(record) {
       data: mapData.slice(i * 5000,  (i +1) * 5000).join(' '),
       mapFunction: `
           function map(data, emit) {
-              let words = data.trim().replace(/[^a-zA-Z0-9]/g, ' ').split(' ');
+              let words = data.replace(/[^a-zA-Z0-9]/g, ' ').trim().split(' ');
               console.log(words);
               words.forEach((word) => {
                 if (word !== '') {
@@ -112,7 +112,7 @@ async function performMapReduce(record) {
       if (currentKey === null) currentKey = item.key;
 
       if (item.key !== currentKey) {
-        reducerActions.push(performReduce(reducerKeyValues));
+        reducerActions.push(performReduce(reducerKeyValues, jobId));
         reducerKeyValues = [];
         currentKey = item.key;
       }
