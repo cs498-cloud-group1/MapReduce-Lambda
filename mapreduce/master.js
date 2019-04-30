@@ -102,9 +102,6 @@ async function performMapReduce(record) {
     }
   }
   if (currentKey !== lastKeySeen) {
-    console.log("This should not print")
-    console.log(currentKey);
-    console.log(lastKeySeen);
     reducerActions.push(
       performReduce(reducerKeyValues, record.dynamodb.NewImage.jobId.S)
     );
