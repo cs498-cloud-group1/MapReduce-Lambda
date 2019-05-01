@@ -77,11 +77,8 @@ functions:
   
   reducer:
     handler: mapreduce/reducer.reducer
-    events:
-      - http:
-          path: reducer
-          method: post
-          cors: true
+    timeout: 900
+    memorySize: 3000
 
   create:
     handler: jobs/create.create
