@@ -209,14 +209,13 @@ resources:
             AttributeType: S
           - AttributeName: value
             AttributeType: N
-        ProvisionedThroughput:
-          ReadCapacityUnits: 500
-          WriteCapacityUnits: 500
+
         KeySchema:
           - AttributeName: id
             KeyType: HASH
           - AttributeName: createdAt
             KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
         GlobalSecondaryIndexes:
           - IndexName: jobsResultsSortKey
             KeySchema:
@@ -226,9 +225,7 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
-            ProvisionedThroughput:
-              ReadCapacityUnits: 500
-              WriteCapacityUnits: 500
+
     shuffleResultsTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -247,9 +244,8 @@ resources:
             KeyType: HASH
           - AttributeName: createdAt
             KeyType: RANGE
-        ProvisionedThroughput:
-          ReadCapacityUnits: 500
-          WriteCapacityUnits: 500
+        BillingMode: PAY_PER_REQUEST
+
         GlobalSecondaryIndexes:
           - IndexName: SortKey
             KeySchema:
@@ -259,9 +255,7 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
-            ProvisionedThroughput:
-              ReadCapacityUnits: 500
-              WriteCapacityUnits: 500
+
     JobsTable:
       Type: AWS::DynamoDB::Table
       Properties:

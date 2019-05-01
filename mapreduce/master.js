@@ -57,6 +57,10 @@ async function performMapReduce(record) {
     record.dynamodb.NewImage.bucket.S,
     record.dynamodb.NewImage.fileName.S
   )).split("\n");
+
+  console.log(`Number of lines in document ${mapData.length}`);
+
+
   let numberOfChunks = Math.ceil(mapData.length / 5000);
   let mappers = [];
   for (let i = 0; i < numberOfChunks; i++) {
