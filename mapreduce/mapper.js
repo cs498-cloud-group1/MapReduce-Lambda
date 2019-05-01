@@ -4,7 +4,7 @@ const uuid = require("uuid");
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
 function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 module.exports.mapper = async (event, context, callback) => {
@@ -38,7 +38,7 @@ module.exports.mapper = async (event, context, callback) => {
       if (dynamoData["RequestItems"]["shuffleResults"].length == 25) {
         try {
           let result = await dynamoDb.batchWrite(dynamoData).promise();
-          await sleep(500);
+          await sleep(200);
           console.log(result);
         } catch (e) {
           console.log(e);
@@ -55,5 +55,5 @@ module.exports.mapper = async (event, context, callback) => {
       console.log(e);
     }
   }
-  callback(null, JSON.stringify(mapData));
+  callback(null, null);
 };

@@ -4,18 +4,13 @@ const uuid = require("uuid");
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
 module.exports.reducer = async (event, context, callback) => {
-  const data = JSON.parse(event.body);
+  const data = event;
   const timestamp = new Date().getTime();
 
   let reduceData = [];
   let emit = emittedData => reduceData.push(emittedData);
   eval(data.reduceFunction);
-  let doReduce = () =>
-    new Promise((resolve, reject) => {
-      reduce(data.data, emit);
-      resolve();
-    });
-  await doReduce();
+  reduce(data.data, emit);
 
   for (let reduceItem of reduceData) {
     const dynamoData = {
@@ -30,10 +25,8 @@ module.exports.reducer = async (event, context, callback) => {
       }
     };
 
-    let result = await dynamoDb.put(dynamoData).promise();
-    console.log(result);
+    await dynamoDb.put(dynamoData).promise();
   }
 
-  console.log(reduceData);
-  callback(null, JSON.stringify(reduceData));
+  callback(null, null);
 };

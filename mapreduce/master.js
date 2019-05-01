@@ -7,10 +7,6 @@ const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const lambda = new AWS.Lambda({
   region: "us-east-1"
 });
-const supportedDatasetTypes = [".txt"];
-
-const reducerUrl =
-  "https://xb6u8lsa7h.execute-api.us-east-1.amazonaws.com/dev/reducer";
 
 async function performReduce(keyValueData, jobId, reduceFunction) {
   const reducerData = {
@@ -18,14 +14,12 @@ async function performReduce(keyValueData, jobId, reduceFunction) {
     data: keyValueData,
     reduceFunction: reduceFunction
   };
-   await fetch(reducerUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(reducerData)
-  });
-  return reducerData;
+  const params = {
+    FunctionName: "back-end-dev-reducer",
+    InvocationType: "RequestResponse",
+    Payload: JSON.stringify(reducerData)
+  };
+  return lambda.invoke(params).promise();
 }
 
 async function readMapReduceResults(jobId, startKey = null) {
@@ -60,13 +54,12 @@ async function performMapReduce(record) {
 
   console.log(`Number of lines in document ${mapData.length}`);
 
-
-  let numberOfChunks = Math.ceil(mapData.length / 5000);
+  let numberOfChunks = Math.ceil(mapData.length / 300);
   let mappers = [];
   for (let i = 0; i < numberOfChunks; i++) {
     const mapperData = {
       jobId: record.dynamodb.NewImage.jobId.S,
-      data: mapData.slice(i * 5000, (i + 1) * 5000).join(" "),
+      data: mapData.slice(i * 300, (i + 1) * 300).join(" "),
       mapFunction: record.dynamodb.NewImage.map.S
     };
     const params = {
@@ -87,12 +80,17 @@ async function performMapReduce(record) {
   let result = await readMapReduceResults(jobId);
   let lastKeySeen = null;
   while (keepGoing) {
-    console.log(result.Count);
     for (let item of result.Items) {
       if (currentKey === null) currentKey = item.key;
 
       if (item.key !== currentKey) {
-        reducerActions.push(performReduce(reducerKeyValues, jobId, record.dynamodb.NewImage.reduce.S));
+        reducerActions.push(
+          performReduce(
+            reducerKeyValues,
+            jobId,
+            record.dynamodb.NewImage.reduce.S
+          )
+        );
         reducerKeyValues = [];
         currentKey = item.key;
       }
@@ -107,7 +105,7 @@ async function performMapReduce(record) {
   }
   if (currentKey !== lastKeySeen) {
     reducerActions.push(
-      performReduce(reducerKeyValues, record.dynamodb.NewImage.jobId.S)
+      performReduce(reducerKeyValues, jobId, record.dynamodb.NewImage.reduce.S)
     );
   }
   await Promise.all(reducerActions);
