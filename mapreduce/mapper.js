@@ -48,7 +48,7 @@ module.exports.mapper = async (event, context, callback) => {
     }
   }
 
-  if (dynamoData["RequestItems"]["shuffleResults"] !== []) {
+  if (dynamoData["RequestItems"]["shuffleResults"].length > 0) {
     try {
       await dynamoDb.batchWrite(dynamoData).promise();
     } catch (e) {
