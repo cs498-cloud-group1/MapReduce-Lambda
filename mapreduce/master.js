@@ -8,6 +8,8 @@ const lambda = new AWS.Lambda({
   region: "us-east-1"
 });
 
+const MAP_CHUNK_SIZE = 300;
+
 async function performReduce(keyValueData, jobId, reduceFunction) {
   const reducerData = {
     jobId: jobId,
@@ -54,12 +56,12 @@ async function performMapReduce(record) {
 
   console.log(`Number of lines in document ${mapData.length}`);
 
-  let numberOfChunks = Math.ceil(mapData.length / 300);
+  let numberOfChunks = Math.ceil(mapData.length / MAP_CHUNK_SIZE);
   let mappers = [];
   for (let i = 0; i < numberOfChunks; i++) {
     const mapperData = {
       jobId: record.dynamodb.NewImage.jobId.S,
-      data: mapData.slice(i * 300, (i + 1) * 300).join(" "),
+      data: mapData.slice(i * MAP_CHUNK_SIZE, (i + 1) * MAP_CHUNK_SIZE).join(" "),
       mapFunction: record.dynamodb.NewImage.map.S
     };
     const params = {
