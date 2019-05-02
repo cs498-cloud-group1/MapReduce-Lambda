@@ -10,11 +10,14 @@ const lambda = new AWS.Lambda({
 
 const MAP_CHUNK_SIZE = 300;
 
-async function performReduce(keyValueData, jobId, reduceFunction) {
+async function performReduce(keyValueList, jobId, reduceFunction) {
+  const key = keyValueList.length && keyValueList[0].key;
+  const values = keyValueList.map(pair => pair.value);
   const reducerData = {
-    jobId: jobId,
-    data: keyValueData,
-    reduceFunction: reduceFunction
+    jobId,
+    key,
+    values,
+    reduceFunction
   };
   const params = {
     FunctionName: "back-end-dev-reducer",
@@ -61,7 +64,7 @@ async function performMapReduce(record) {
   for (let i = 0; i < numberOfChunks; i++) {
     const mapperData = {
       jobId: record.dynamodb.NewImage.jobId.S,
-      data: mapData.slice(i * MAP_CHUNK_SIZE, (i + 1) * MAP_CHUNK_SIZE).join(" "),
+      lines: mapData.slice(i * MAP_CHUNK_SIZE, (i + 1) * MAP_CHUNK_SIZE),
       mapFunction: record.dynamodb.NewImage.map.S
     };
     const params = {

@@ -13,7 +13,7 @@ module.exports.mapper = async (event, context, callback) => {
   let mapData = [];
   let emit = emittedData => mapData.push(emittedData);
   eval(data.mapFunction);
-  map(data.data, emit);
+  data.lines.forEach(line => map(line, emit));
 
   let dynamoData = {
     RequestItems: {
