@@ -16,6 +16,8 @@
     "serverless-offline": "^4.9.2"
   },
   "dependencies": {
+    "es6-promise": "^4.2.6",
+    "isomorphic-fetch": "^2.2.1",
     "uuid": "^3.3.2"
   }
 }

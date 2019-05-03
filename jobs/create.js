@@ -13,7 +13,8 @@ module.exports.create = async (event, context, callback) => {
     Item: {
       jobId: uuid.v1(),
       jobName: data.jobName,
-      url: data.url,
+      bucket: data.bucket,
+      fileName: data.fileName,
       map: data.map,
       reduce: data.reduce,
       status: "created",

@@ -20,6 +20,12 @@ service: back-end # NOTE: update this with your service name
 provider:
   name: aws
   runtime: nodejs8.10
+  timeout: 900
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - lambda:InvokeFunction
+      Resource: "*"
 
 # you can overwrite defaults here
 #  stage: dev
@@ -63,6 +69,17 @@ functions:
           batchsize: 1
           enabled: true
           arn: { "Fn::GetAtt": ["JobsTable", "StreamArn"] }
+
+  mapper:
+    handler: mapreduce/mapper.mapper
+    timeout: 900
+    memorySize: 3000
+  
+  reducer:
+    handler: mapreduce/reducer.reducer
+    timeout: 900
+    memorySize: 3000
+
   create:
     handler: jobs/create.create
     events:
@@ -77,6 +94,18 @@ functions:
           path: jobs
           method: get
           cors: true
+
+  results:
+    handler: jobs/getresults.getresults
+    events:
+      - http:
+          path: results/{jobId}
+          method: get
+          cors: true
+        request:
+            parameters:
+              paths:
+                jobId: true
 
   getjob:
     handler: jobs/getjob.getjob
@@ -102,7 +131,7 @@ plugins:
 #          method: get
 #      - websocket: $connect
 #      - s3: ${env:BUCKET}
-#      - schedule: rate(10 minutes)
+#      - schedule: rate(50 minutes)
 #      - sns: greeter-topic
 #      - stream: arn:aws:dynamodb:region:XXXXXX:table/foo/stream/1970-01-01T00:00:00.000
 #      - alexaSkill: amzn1.ask.skill.xx-xx-xx-xx
@@ -140,6 +169,90 @@ plugins:
 #       Value: "Some output value"
 resources:
   Resources:
+    DataBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: mapreduce-data-bucket
+    DataBucketPolicy: 
+      Type: AWS::S3::BucketPolicy
+      Properties: 
+        Bucket:
+          Ref: "DataBucket"
+        PolicyDocument:
+          Statement:
+            -
+              Effect: "Allow"
+              Principal: "*"
+              Action:
+                - "s3:GetObject"
+              Resource:
+                Fn::Join:
+                  - ""
+                  - 
+                    - "arn:aws:s3:::"
+                    - 
+                      Ref: "DataBucket"
+                    - "/*"
+    jobResultTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: jobResult
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: N
+          - AttributeName: jobId
+            AttributeType: S
+          - AttributeName: value
+            AttributeType: N
+
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+          - AttributeName: createdAt
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        GlobalSecondaryIndexes:
+          - IndexName: jobsResultsSortKey
+            KeySchema:
+              - AttributeName: jobId
+                KeyType: HASH
+              - AttributeName: value
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
+    shuffleResultsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: shuffleResults
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: N
+          - AttributeName: jobId
+            AttributeType: S
+          - AttributeName: key
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+          - AttributeName: createdAt
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+
+        GlobalSecondaryIndexes:
+          - IndexName: SortKey
+            KeySchema:
+              - AttributeName: jobId
+                KeyType: HASH
+              - AttributeName: key
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
     JobsTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -175,8 +288,14 @@ resources:
                 - dynamodb:Scan
                 - dynamodb:UpdateItem
                 - dynamodb:DeleteItem
+                - dynamodb:BatchWriteItem
                 - dynamodb:DescribeStream
                 - dynamodb:ListStreams
-              Resource: arn:aws:dynamodb:*:*:table/jobs
+              Resource: 
+                - arn:aws:dynamodb:*:*:table/jobs
+                - arn:aws:dynamodb:*:*:table/shuffleResults
+                - arn:aws:dynamodb:*:*:table/shuffleResults/index/*
+                - arn:aws:dynamodb:*:*:table/jobResult
+                - arn:aws:dynamodb:*:*:table/jobResult/index/*
         Roles:
           - Ref: IamRoleLambdaExecution
