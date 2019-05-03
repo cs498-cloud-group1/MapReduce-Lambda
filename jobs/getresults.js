@@ -48,13 +48,16 @@ module.exports.getresults = async (event, context, callback) => {
       return;
     }
 
+    const resultText = result.Items.map(item => item.key + ' ' + item.value).join('\n');
+
     const response = {
        statusCode: 200,
        headers: {
+         "Content-Type": "text/plain",
          'Access-Control-Allow-Origin': '*',
          'Access-Control-Allow-Credentials': true,
        },
-       body: JSON.stringify(result.Items)
+       body: resultText
     };
     callback(null, response);
 
