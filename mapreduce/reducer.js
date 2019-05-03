@@ -10,7 +10,7 @@ module.exports.reducer = async (event, context, callback) => {
   let reduceData = [];
   let emit = emittedData => reduceData.push(emittedData);
   eval(data.reduceFunction);
-  reduce(data.data, emit);
+  reduce(data.key, data.values, emit);
 
   for (let reduceItem of reduceData) {
     const dynamoData = {
