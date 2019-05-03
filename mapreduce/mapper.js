@@ -17,13 +17,13 @@ module.exports.mapper = async (event, context, callback) => {
 
   let dynamoData = {
     RequestItems: {
-      shuffleResults: []
+      ShuffleResults: []
     }
   };
 
   for (let mapItem of mapData) {
     if (mapItem.key && mapItem.value) {
-      dynamoData["RequestItems"]["shuffleResults"].push({
+      dynamoData["RequestItems"]["ShuffleResults"].push({
         PutRequest: {
           Item: {
             jobId: data.jobId,
@@ -35,20 +35,19 @@ module.exports.mapper = async (event, context, callback) => {
           }
         }
       });
-      if (dynamoData["RequestItems"]["shuffleResults"].length == 25) {
+      if (dynamoData["RequestItems"]["ShuffleResults"].length == 25) {
         try {
           let result = await dynamoDb.batchWrite(dynamoData).promise();
           await sleep(200);
-          console.log(result);
         } catch (e) {
           console.log(e);
         }
-        dynamoData["RequestItems"]["shuffleResults"] = [];
+        dynamoData["RequestItems"]["ShuffleResults"] = [];
       }
     }
   }
 
-  if (dynamoData["RequestItems"]["shuffleResults"].length > 0) {
+  if (dynamoData["RequestItems"]["ShuffleResults"].length > 0) {
     try {
       await dynamoDb.batchWrite(dynamoData).promise();
     } catch (e) {

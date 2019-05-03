@@ -14,7 +14,7 @@ module.exports.reducer = async (event, context, callback) => {
 
   for (let reduceItem of reduceData) {
     const dynamoData = {
-      TableName: "jobResult",
+      TableName: "JobResult",
       Item: {
         jobId: data.jobId,
         key: reduceItem.key,
@@ -24,8 +24,11 @@ module.exports.reducer = async (event, context, callback) => {
         updatedAt: timestamp
       }
     };
-
-    await dynamoDb.put(dynamoData).promise();
+    try {
+      await dynamoDb.put(dynamoData).promise();
+    } catch(e) {
+      console.log("Error saving job result: ", e);
+    }
   }
 
   callback(null, null);

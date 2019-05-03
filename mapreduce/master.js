@@ -29,7 +29,7 @@ async function performReduce(keyValueList, jobId, reduceFunction) {
 
 async function readMapReduceResults(jobId, startKey = null) {
   const params = {
-    TableName: "shuffleResults",
+    TableName: "ShuffleResults",
     IndexName: "SortKey",
     KeyConditionExpression: "jobId = :job_id",
     ExpressionAttributeValues: { ":job_id": jobId }
@@ -47,6 +47,27 @@ async function readS3Data(bucket, fileName) {
     .getObject({ Bucket: bucket, Key: fileName })
     .promise();
   return data.Body.toString();
+}
+
+async function setStatus(jobId, status) {
+  const dynamoData = {
+    TableName: "Jobs",
+    Key: {
+      jobId
+    },
+    ExpressionAttributeValues: { 
+      ":s": status
+    },
+    ExpressionAttributeNames: {'#a' : 'status'},
+    UpdateExpression: "set #a = :s",
+  };
+  // console.log({ dynamoData });
+  try {
+    await dynamoDb.update(dynamoData).promise();
+    console.log('Updated job status');
+  } catch(e) {
+    console.log('Failed to update job status: ', e);
+  }
 }
 
 async function performMapReduce(record) {
@@ -114,6 +135,8 @@ async function performMapReduce(record) {
     );
   }
   await Promise.all(reducerActions);
+
+  await setStatus(jobId, "done");
 }
 
 module.exports.master = async (event, context, callback) => {
