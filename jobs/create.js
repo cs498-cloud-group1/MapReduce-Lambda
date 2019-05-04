@@ -9,7 +9,7 @@ module.exports.create = async (event, context, callback) => {
   const timestamp = new Date().getTime();
   const data = JSON.parse(event.body);
   const dynamoData = {
-    TableName: "jobs",
+    TableName: "Jobs",
     Item: {
       jobId: uuid.v1(),
       jobName: data.jobName,

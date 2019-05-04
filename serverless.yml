@@ -193,10 +193,10 @@ resources:
                     - 
                       Ref: "DataBucket"
                     - "/*"
-    jobResultTable:
+    JobResultTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: jobResult
+        TableName: JobResult
         AttributeDefinitions:
           - AttributeName: id
             AttributeType: S
@@ -223,10 +223,10 @@ resources:
             Projection:
               ProjectionType: ALL
 
-    shuffleResultsTable:
+    ShuffleResultsTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: shuffleResults
+        TableName: ShuffleResults
         AttributeDefinitions:
           - AttributeName: id
             AttributeType: S
@@ -256,17 +256,13 @@ resources:
     JobsTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: jobs
+        TableName: Jobs
         AttributeDefinitions:
           - AttributeName: jobId
             AttributeType: S
-          - AttributeName: createdAt
-            AttributeType: N
         KeySchema:
           - AttributeName: jobId
             KeyType: HASH
-          - AttributeName: createdAt
-            KeyType: RANGE
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
@@ -292,10 +288,10 @@ resources:
                 - dynamodb:DescribeStream
                 - dynamodb:ListStreams
               Resource: 
-                - arn:aws:dynamodb:*:*:table/jobs
-                - arn:aws:dynamodb:*:*:table/shuffleResults
-                - arn:aws:dynamodb:*:*:table/shuffleResults/index/*
-                - arn:aws:dynamodb:*:*:table/jobResult
-                - arn:aws:dynamodb:*:*:table/jobResult/index/*
+                - arn:aws:dynamodb:*:*:table/Jobs
+                - arn:aws:dynamodb:*:*:table/ShuffleResults
+                - arn:aws:dynamodb:*:*:table/ShuffleResults/index/*
+                - arn:aws:dynamodb:*:*:table/JobResult
+                - arn:aws:dynamodb:*:*:table/JobResult/index/*
         Roles:
           - Ref: IamRoleLambdaExecution

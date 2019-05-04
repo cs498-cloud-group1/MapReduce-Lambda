@@ -6,7 +6,7 @@ const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
 module.exports.getjob = async (event, context, callback) => {
   const params = {
-    TableName: "jobs",
+    TableName: "Jobs",
     FilterExpression: "jobId = :jobId",
     ExpressionAttributeValues: {
       ":jobId": event.pathParameters.jobId

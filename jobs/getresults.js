@@ -6,7 +6,7 @@ const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
 module.exports.getresults = async (event, context, callback) => {
   const params = {
-    TableName: "jobResult",
+    TableName: "JobResult",
     IndexName: "jobsResultsSortKey",
     KeyConditionExpression: "jobId = :job_id",
     ScanIndexForward: false,
